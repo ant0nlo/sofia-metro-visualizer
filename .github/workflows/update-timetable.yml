@@ -1,0 +1,65 @@
+name: Update timetable
+
+# Every night: download ЦГМ's official GTFS schedule, rebuild the metro data,
+# and publish a new index.html only if what riders see has changed.
+on:
+  schedule:
+    - cron: '17 1 * * *'   # 01:17 UTC = 03:17 Sofia time in winter, 04:17 in summer
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-timetable
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.result == 'CHANGED' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download the GTFS schedule
+        run: |
+          mkdir -p /tmp/gtfs/static
+          curl -fsSL --retry 3 -o /tmp/gtfs/static.zip https://gtfs.sofiatraffic.bg/api/v1/static
+          unzip -oq /tmp/gtfs/static.zip -d /tmp/gtfs/static
+
+      - name: Build the metro data
+        run: python3 tools/build_metro.py /tmp/gtfs/static /tmp/metro-new.json
+
+      - name: Compare with the shipped timetable
+        id: check
+        run: echo "result=$(python3 tools/update_check.py data/metro.json /tmp/metro-new.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Commit the new timetable
+        if: steps.check.outputs.result == 'CHANGED'
+        run: |
+          cp /tmp/metro-new.json data/metro.json
+          python3 tools/assemble.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/metro.json index.html
+          git commit -m "Update metro timetable from ЦГМ GTFS"
+          git push
+
+      - name: Nothing to do
+        if: steps.check.outputs.result != 'CHANGED'
+        run: echo "Timetable unchanged."
+
+  # a push made by this workflow does not start other workflows, so deploy from here
+  deploy:
+    needs: update
+    if: needs.update.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

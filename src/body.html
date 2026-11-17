@@ -1,0 +1,69 @@
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">М</div>
+      <div>
+        <h1>Метро София на живо</h1>
+        <div class="sub">Къде са влаковете сега, изчислено по официалното разписание</div>
+      </div>
+    </div>
+    <div class="clock">
+      <span id="mode" class="pill live"><span class="dot"></span><span id="modeTxt">На живо</span></span>
+      <span class="time" id="clock">--:--:--</span>
+      <span class="date" id="date"></span>
+    </div>
+  </header>
+  <main>
+    <div class="mapwrap">
+      <div class="mapscroll" id="mapScroll">
+        <svg id="map" role="img" aria-label="Схема на метрото в София с влаковете в движение">
+          <g id="gBase" class="base"></g><g id="gGrid"></g><g id="gLines"></g><g id="gStations"></g><g id="gLabels"></g><g id="gTrains"></g>
+        </svg>
+      </div>
+      <div class="viewsw" role="group" aria-label="Изглед">
+        <button id="vBoard" type="button" aria-pressed="true">Схема</button>
+        <button id="vGeo" type="button" aria-pressed="false">Карта</button>
+      </div>
+      <div class="note" id="mapNote"></div>
+      <div class="mapctl">
+        <button id="zin" type="button" aria-label="Приближи">+</button>
+        <button id="zout" type="button" aria-label="Отдалечи">−</button>
+        <button id="zfit" type="button" aria-label="Покажи цялата мрежа" style="font-size:14px">⤢</button>
+        <button id="zlbl" type="button" aria-pressed="true" aria-label="Скрий имената на спирките" title="Скрий имената на спирките" style="font-size:14px">Аа</button>
+      </div>
+      <div class="osm" id="osmAttr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
+      <div class="scale" aria-hidden="true"><span id="scaleTxt">1 км</span><i id="scaleBar" style="width:80px"></i></div>
+    </div>
+    <aside>
+      <section class="card" id="detail" aria-live="polite">
+        <h2>Избрано</h2>
+        <div class="empty">Докоснете влак, за да видите следващите му спирки, или станция, за да видите кога идват влаковете.</div>
+      </section>
+      <section class="card">
+        <h2>Линии · влакове в движение</h2>
+        <div class="lines" id="lines"></div>
+      </section>
+      <section class="card">
+        <h2>Време</h2>
+        <div class="row" role="group" aria-label="Скорост">
+          <button class="btn" id="now" type="button" aria-pressed="true">Сега</button>
+          <button class="btn" data-speed="10" type="button" aria-pressed="false">×10</button>
+          <button class="btn" data-speed="60" type="button" aria-pressed="false">×60</button>
+          <button class="btn" id="pause" type="button" aria-pressed="false">Пауза</button>
+        </div>
+        <label class="field" for="tod">Час от денонощието <span id="todTxt"></span>
+          <input type="range" id="tod" min="0" max="86340" step="60" value="0">
+        </label>
+        <label class="field" for="day">Дата (делник и почивен ден имат различно разписание)
+          <input type="date" id="day" min="2026-11-16" max="2027-11-16">
+        </label>
+      </section>
+      <section class="card src">
+        <div>Позициите са изчислени по разписанието, а не идват от GPS. Закъснения и спрени влакове не се виждат.</div>
+        <div>Данни: GTFS разписание на Център за градска мобилност (<a href="https://www.sofiatraffic.bg/" target="_blank" rel="noopener">sofiatraffic.bg</a>). Живият им поток (GTFS‑Realtime) съдържа автобуси, трамваи и тролейбуси, но не и метрото.</div>
+        <div id="dataInfo"></div>
+        <div>Фонова карта на София: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (лиценз ODbL), данни към 17.11.2026.</div>
+      </section>
+    </aside>
+  </main>
+</div>

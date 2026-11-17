@@ -1,0 +1,16 @@
+{
+  "name": "Метро София на живо",
+  "short_name": "Метро София",
+  "description": "Къде са влаковете на софийското метро сега, по официалното разписание на ЦГМ.",
+  "lang": "bg",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1B273A",
+  "theme_color": "#1B273A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

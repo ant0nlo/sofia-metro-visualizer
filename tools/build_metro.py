@@ -1,4 +1,4 @@
-import csv,sys,collections,json,math,datetime
+import csv,sys,collections,json,math,datetime,re
 from zoneinfo import ZoneInfo
 D=sys.argv[1]; OUT=sys.argv[2]
 R=lambda f: csv.DictReader(open(f"{D}/{f}",encoding='utf-8-sig'))
@@ -77,6 +77,17 @@ data={'lines':{k:{'c':'#'+r['route_color'],'tc':'#'+r['route_text_color'],'n':r[
  'stations':stations,'patterns':pats,'trips':out,'sets':sets,'feed':fi['feed_start_date'],'feedEnd':fi['feed_end_date'],
  'built':datetime.datetime.now(ZoneInfo('Europe/Sofia')).strftime('%Y%m%d')}
 assert set(data['lines'])==set(L) and len(stations)>=40 and len(out)>=1000, 'metro data looks incomplete'
+# the feed is outside data: refuse anything that does not look like a timetable, so nothing odd is ever published
+BAD = re.compile(r'[<>\x00-\x1f\x7f]')
+for k, v in data['lines'].items():
+    for c in (v['c'], v['tc']):
+        if not re.fullmatch(r'#[0-9A-Fa-f]{6}', c): sys.exit(f'suspicious colour for {k}: {c!r}')
+    if BAD.search(v['n']) or len(v['n']) > 120: sys.exit(f'suspicious line name for {k}: {v["n"]!r}')
+for sid, s in stations.items():
+    if BAD.search(s['n']) or not s['n'].strip() or len(s['n']) > 60: sys.exit(f'suspicious station name {sid}: {s["n"]!r}')
+    if not (42.5 < s['lat'] < 42.9 and 23.0 < s['lon'] < 23.7): sys.exit(f'station outside Sofia {sid}: {s["lat"]},{s["lon"]}')
+for k, pts in data['shapes'].items():
+    if any(not (42.5 < a < 42.9 and 23.0 < b < 23.7) for a, b in pts): sys.exit(f'shape {k} leaves Sofia')
 json.dump(data,open(OUT,'w'),ensure_ascii=False,separators=(',',':'))
 import os; print('bytes',os.path.getsize(OUT), 'stations',len(stations))
 

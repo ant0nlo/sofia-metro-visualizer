@@ -230,7 +230,12 @@ const LAT0 = 42.69, KX = 111320*Math.cos(LAT0*Math.PI/180), KY = 110540;
 const toW = (lat, lon) => [(lon-23.32)*KX, (lat-LAT0)*KY];
 const LINES = ['M1','M2','M3','M4'];
 const OFF = {M1:0, M4:0, M2:0, M3:0};   // all lines share one colour, so the shared M1/M4 track is drawn once   // px side offset where M1 and M4 share track
-const LC = DATA.lines;
+// text from the timetable (station names, colours) is data, never markup: colours must be #RRGGBB,
+// and every name that goes into HTML passes through esc()
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeColor = c => /^#[0-9A-Fa-f]{6}$/.test(c) ? c : '#6F84A3';
+const LC = {};
+for (const [k, v] of Object.entries(DATA.lines)) LC[k] = {...v, c: safeColor(v.c), tc: safeColor(v.tc)};
 const visible = {M1:true,M2:true,M3:true,M4:true};
 
 /* ---------- geometry ---------- */
@@ -805,12 +810,12 @@ function drawTrains(w){
 }
 
 /* ---------- panel ---------- */
-const badge = l => `<span class="badge" style="--c:${LC[l].c}"><i></i>${l}</span>`;
+const badge = l => `<span class="badge" style="--c:${LC[l] ? LC[l].c : '#6F84A3'}"><i></i>${esc(l)}</span>`;
 const linesBox = $('lines');
 for (const l of LINES){
   const b = document.createElement('button');
   b.type='button'; b.className='line'; b.setAttribute('aria-pressed','true'); b.dataset.line=l;
-  b.innerHTML = `${badge(l)}<span class="term">${TERM[l][0]} ↔ ${TERM[l][1]}</span><span class="cnt" id="cnt${l}">–</span>`;
+  b.innerHTML = `${badge(l)}<span class="term">${esc(TERM[l][0])} ↔ ${esc(TERM[l][1])}</span><span class="cnt" id="cnt${l}">–</span>`;
   b.title = 'Покажи или скрий линия '+l;
   b.addEventListener('click',()=>{ visible[l]=!visible[l]; b.setAttribute('aria-pressed', String(visible[l])); drawStatic(); });
   const hov = on => ()=>{ hoverLine = on ? l : null; drawStatic(); };
@@ -836,17 +841,17 @@ function renderPanel(w){
     if (!c){ box.innerHTML = `<h2>Избрано</h2><div class="empty">Влакът стигна крайната си спирка. Изберете друг влак.</div>`; return; }
     const {t, rel} = c, p = t.p, st = stateOf(t, rel), n = p.s.length;
     let status;
-    if (rel < 0) status = `Чака на ${ST[p.s[0]].name}, тръгва в ${hhmm(t.t0+p.d[0])}`;
-    else if (st.dwell) status = st.at===n-1 ? `Пристигна на ${ST[p.s[n-1]].name}` : `На спирка ${ST[p.s[st.at]].name}`;
-    else { const eta = Math.max(0, Math.round((t.t0+p.a[st.next] - (rel+t.t0))/60)); status = `Пътува към ${ST[p.s[st.next]].name} · ${eta<1?'пристига':'след '+eta+' мин'}`; }
+    if (rel < 0) status = `Чака на ${esc(ST[p.s[0]].name)}, тръгва в ${hhmm(t.t0+p.d[0])}`;
+    else if (st.dwell) status = st.at===n-1 ? `Пристигна на ${esc(ST[p.s[n-1]].name)}` : `На спирка ${esc(ST[p.s[st.at]].name)}`;
+    else { const eta = Math.max(0, Math.round((t.t0+p.a[st.next] - (rel+t.t0))/60)); status = `Пътува към ${esc(ST[p.s[st.next]].name)} · ${eta<1?'пристига':'след '+eta+' мин'}`; }
     const from = st.dwell ? st.at : st.next;
     let li = '';
     for (let j=Math.max(0,from); j<n; j++){
-      li += `<li class="${j===from?'next':''}" style="--c:${LC[p.r].c}"><span class="k"></span><span>${ST[p.s[j]].name}</span><span class="t">${hhmm(t.t0+p.a[j])}</span></li>`;
+      li += `<li class="${j===from?'next':''}" style="--c:${LC[p.r].c}"><span class="k"></span><span>${esc(ST[p.s[j]].name)}</span><span class="t">${hhmm(t.t0+p.a[j])}</span></li>`;
     }
-    box.innerHTML = `<h2>Влак</h2><div class="dhead">${badge(p.r)}<h3>към ${p.head}</h3></div>
+    box.innerHTML = `<h2>Влак</h2><div class="dhead">${badge(p.r)}<h3>към ${esc(p.head)}</h3></div>
       <div class="status">${status}</div>
-      <div class="sub">Тръгнал от ${ST[p.s[0]].name} в ${hhmm(t.t0+p.d[0])}</div>
+      <div class="sub">Тръгнал от ${esc(ST[p.s[0]].name)} в ${hhmm(t.t0+p.d[0])}</div>
       <ul class="stops">${li}</ul>`;
   } else {
     const one = selected.line ? selected : null, oneLines = one ? one.line.split(',') : [];
@@ -876,18 +881,18 @@ function renderPanel(w){
     for (const g of gs){
       g.ts.sort((a,b)=>a-b);
       const m = g.ts.slice(0,4).map((d,k)=>{ const mn = Math.floor((d-s)/60); const txt = mn<1 ? 'сега' : mn+' мин'; return k===0?`<b>${txt}</b>`:txt; }).join(' · ');
-      html += `<div class="dep">${badge(g.l)}<div><div class="to">към ${g.head}</div><div class="mins">${m}</div></div></div>`;
+      html += `<div class="dep">${badge(g.l)}<div><div class="to">към ${esc(g.head)}</div><div class="mins">${m}</div></div></div>`;
     }
     const sl = one ? oneLines : [...new Set(mem.flatMap(m=>[...ST[m].lines]))].sort();
-    let sub = mem.length>1 ? `<div class="sub">Прикачване: ${mem.map(m=>ST[m].name).join(' ↔ ')}</div>` : '';
+    let sub = mem.length>1 ? `<div class="sub">Прикачване: ${mem.map(m=>esc(ST[m].name)).join(' ↔ ')}</div>` : '';
     let empty = 'Няма влакове през следващите 90 минути.';
     if (one){
       const ends = [...new Set(oneLines.map(l=>{ const st = ROWS[l].stops; return ST[st[one.dir==='r' ? st.length-1 : 0]].name; }))];
-      sub = `<div class="sub">Посока: към ${ends.join(' / ')}</div>`;
+      sub = `<div class="sub">Посока: към ${ends.map(esc).join(' / ')}</div>`;
       const atEnd = oneLines.every(l=>{ const R1 = ROWS[l], i = R1.ix[S.id]; return one.dir==='r' ? i===R1.stops.length-1 : i===0; });
       if (atEnd) empty = 'Това е крайна спирка: влаковете в тази посока свършват тук.';
     }
-    box.innerHTML = `<h2>Станция</h2><div class="dhead"><h3>${S.name}</h3><div class="row">${sl.map(badge).join('')}</div></div>${sub}
+    box.innerHTML = `<h2>Станция</h2><div class="dhead"><h3>${esc(S.name)}</h3><div class="row">${sl.map(badge).join('')}</div></div>${sub}
       <div class="deps">${html || `<div class="empty">${empty}</div>`}</div>`;
   }
 }
